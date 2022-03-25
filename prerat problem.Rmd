@@ -1,0 +1,112 @@
+---
+title: "Twitter Thing"
+author: "Alex"
+date: "3/25/2022"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(alex) #Personalized custom theme package
+```
+
+## The Setup
+
+A mysterious economist approaches you, offering a bet
+
+Flip a coin
+ - If heads, you gain 50%
+ - If tails, you lose 40%
+
+Assuming you're not particularly risk-averse or anti-betting in general, is this a good bet?
+
+What if you could play 100 times in a row?
+
+
+```{r Coin Flip}
+#Modeling a coin flip
+flip = function(){
+  coin = c(1,0)
+  sample(coin, size = 1)
+}
+```
+
+What if we just played once?
+
+We have a 50% chance of flipping heads, and recieving payout
+
+$1.5x$
+
+And a 50% chance of flipping tails, and reciving payout 
+
+$0.6x$
+
+So in a one game situation, the expected payout is:
+
+$0.5 * 1.5x + 0.5*0.6x = 1.05x$
+
+Next, I want to run a Monte Carlo simulation of this game - It should be expected at this point that the expected value here is not a great evaluation method, given that any setup where we roll even on heads/tails would result in a net loss.
+
+```{r 100 Games}
+#Function for a single game
+gamePayout = function(wager, coin){
+  if(coin == 1){
+    wager = wager * 1.5
+  } else {
+    wager = wager * 0.6
+  }
+  wager
+}
+
+#Code for a single 100 game chain
+runGame = function(){
+  nTimes = 100
+  i = 0
+  wager = 100
+  heads = 0
+  while(i < nTimes){
+    coin = flip()
+    heads = heads + coin
+    wager = gamePayout(wager, coin)
+    i = i + 1
+  }
+  cbind(wager, heads)
+}
+
+#Monte Carlo Simulation
+nTimes = 1000
+i = 0
+outcomes = c()
+while(i<nTimes){
+  i = i + 1
+  outcomes = rbind(outcomes, runGame())
+}
+outcomes = as.data.frame(outcomes)
+```
+
+The mean outcome here is `r mean(outcomes$wager)`, but the median is `r median(outcomes$wager)`. Clearly, the expected outcome is highly skewed by unlikely outcomes where heads is rolled a significant number of times. 
+
+```{r Plotting, error = FALSE, message = FALSE}
+outcomes %>%
+  ggplot(aes(x= heads, y = wager)) +
+  geom_point(col = "#FD7F71") +
+  geom_hline(yintercept = 100, color = "#85D4E3") +
+  geom_text(aes(x = 45, y = 108, label = "Breakeven: Outcome = Initial Wager"), color = "#85D4E3") +
+  xlim(40,60) +
+  ylim(0, 250) +
+  labs(
+    x = "Number of Heads",
+    y = "Final Outcome",
+    title = "Heads Flipped vs Total Winnings",
+    subtitle = "Examining 40-60 heads range",
+    caption = "@unstandarderror"
+  ) +
+  theme_alex() +
+  theme(plot.caption = element_text(hjust = 1)) +
+  theme(plot.margin = unit(c(5.5, 5.5, 5.5, 5.5), "points"))
+```
+
+
+
+
